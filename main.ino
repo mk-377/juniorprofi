@@ -17,7 +17,6 @@ EthernetServer server(80);
 boolean stateEKG = true;
 boolean statePulse = true;
 
-
 void setup() {
   Serial.begin(9600); // Подключаем библиотеку
   pinMode(LOPLUS, INPUT);
@@ -31,7 +30,7 @@ void setup() {
   if (Ethernet.hardwareStatus() == EthernetNoHardware) {
     Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
     while (true) {
-      delay(1); // do nothing, no point running without Ethernet hardware
+      delay(1);
     }
   }
   if (Ethernet.linkStatus() == LinkOFF){Serial.println("Ethernet cable is connected.");}
@@ -48,6 +47,7 @@ void loop()
   EthernetClient client = server.available();
   uint32_t nowpulse = millis();
   uint32_t nowecg = millis();
+  digitalWrite(LEDGREEN, LOW);
   digitalWrite(LEDRED, HIGH); // сигнал об отсутствии работ
   if (client) {
     while (client.connected()) {
@@ -61,45 +61,51 @@ void loop()
         if (c == '\n') { int bitt = 0;
           HTTP(client);
           if (request.indexOf("StartPulseMetr") > 0)
-          {
+          {            
+
             digitalWrite(LEDRED, LOW);
             digitalWrite(LEDGREEN, HIGH);
             statePulse = false;
-            if (statePulse == false){client.println("PulseMetr: in work");}
-            else{client.println("PulseMetr: ready");}
+            if (statePulse == false){client.println("PulseMetr: in work");}           
             while (millis() - nowpulse < 15000)
             {
               int pulse = analogRead(PULSEPIN);
               Serial.println(pulse);
-              if (pulse > 600){tone(ZOOMER, 1024); bitt += 1;}
+              if (pulse > 550){tone(ZOOMER, 1024); bitt = bitt + 1;}
               else{noTone(ZOOMER);}
               //
               delay(10);
             }
-            client.println(PAGE_Graph(bitt));
+            client.println("</br>");
+            client.println("Pulses: ");client.println(bitt);
+            client.println("</br>");
             resetFunc();
+            digitalWrite(LEDGREEN, LOW);
+            digitalWrite(LEDRED, HIGH);
           }
           if (request.indexOf("StartEKG") > 0)
           {
             digitalWrite(LEDRED, LOW);
             digitalWrite(LEDGREEN, HIGH);
             stateEKG = false;
-            client.println("PulseMetr: in work");
+            
             if (stateEKG == false){client.println("EKG: in work");}
-            else{client.println("EKG: ready");}
             while (millis () - nowecg < 15000)
             {
               if ((digitalRead(LOPLUS) == 1) || (digitalRead(LOMINUS) == 1)){Serial.println("Error");}
               else
               {
+                
                 Serial.println(analogRead(ECGPIN));
                 tone(ZOOMER, 1024);
                 delay(10);
                 noTone(ZOOMER);
-                delay(10);
+                delay(10); 
               }
               delay(10);
-            }
+            }     
+            digitalWrite(LEDGREEN, LOW);
+            digitalWrite(LEDRED, HIGH);      
             resetFuncAgain();
           }
           delay(1);
